@@ -4,6 +4,11 @@
 library(tidyverse)
 library(lme4)
 
+get_b <- function(x){
+  c(x[2,1] - x[1,1],
+    x[2,2] - x[1,2])
+}
+
 
 sim_syncom_f2 <- function(n_sims = 10,
                           beta_env = NULL,
@@ -78,19 +83,82 @@ sim_syncom_f2 <- function(n_sims = 10,
   
 }
 
-sim_syncom_f2()
+extract_estimates <- function(Sims){
+  # Model and extract estimates
+  Res <- NULL
+  for(i in 1:ncol(Sims$Sims)){
+    
+    Dat <- Sims$Dat
+    Dat$y <- Sims$Sims[,i]
+    
+    m1 <- lmer(y ~ env + (env | CCB1) +
+                 (env | CCB2) +
+                 (env | CCB3) +
+                 (env | CCB4) +
+                 (env | CCB5), data = Dat)
+    # summary(m1)
+    # ranef(m1)$CCB1
+    
+    B_est <- rbind( get_b(ranef(m1)$CCB1),
+                    get_b(ranef(m1)$CCB2),
+                    get_b(ranef(m1)$CCB3),
+                    get_b(ranef(m1)$CCB4),
+                    get_b(ranef(m1)$CCB5))
+    
+    Res <- Res %>%
+      bind_rows(bind_cols(b_strains_est = B_est[,1],
+                          b_strains_true = Sims$b_strains,
+                          b_envstrain_est = B_est[,2],
+                          b_envstrain_true = Sims$b_envstrain) %>%
+                  mutate(sim_id = colnames(Sims$Sims)[i]))
+  }
+  
+  Res
+}
 
 
+n_sets <- 100
+set.seed(2789)
+Res <- NULL
+for(i in 1:n_sets){
+  Sims <- sim_syncom_f2(n_sims = 10)
+  
+  Res <- Res %>%
+    bind_rows(extract_estimates(Sims) %>%
+                mutate(set_id = paste0("set_", i))) 
+}
+Res
+
+write.table(Res, file = "crn_sims_est_vs_true.tsv")
+p1 <- Res %>%
+  ggplot(aes(x = b_strains_true, y = b_strains_est)) +
+  geom_point() +
+  geom_abline(slope = 1, intercept = 0, col = "blue", size = 2) +
+  AMOR::theme_blackbox()
+p1 
+ggsave("crn_b_strains.png", width = 5, height = 5)
+
+p1 <- Res %>%
+  ggplot(aes(x = b_envstrain_true, y = b_envstrain_est)) +
+  geom_point() +
+  geom_abline(slope = 1, intercept = 0, col = "blue", size = 2) +
+  AMOR::theme_blackbox()
+p1
+ggsave("crn_b_envstrain.png", width = 5, height = 5)
+  
+
+p1 <- Res %>%
+  ggplot(aes(x = abs(b_strains_true - b_strains_est), group = set_id)) +
+  geom_density() +
+  AMOR::theme_blackbox()
+p1
+ggsave("crn_b_strain_error.png", width = 5, height = 5)
+
+p1 <- Res %>%
+  ggplot(aes(x = abs(b_envstrain_true - b_envstrain_est), group = set_id)) +
+  geom_density() +
+  AMOR::theme_blackbox()
+p1
+ggsave("crn_b_envstrain_error.png", width = 5, height = 5)
 
 
-
-
-
-
-
-
-
-
-
-
-list()
