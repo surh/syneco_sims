@@ -85,30 +85,102 @@ sim_syncom_rand <- function(n_sims = 10,
        b_envstrain = b_envstrain)
 }
 
+extract_estimates_rand <- function(Sims){
+  Res <- NULL
+  for(i in 1:ncol(Sims$Sims)){
+    
+    Dat <- Sims$Dat
+    Dat$y <- Sims$Sims[,i]
+    
+    m1 <- lmer(y ~ env + (env | b_strain_1) +
+                 (env | b_strain_2) +
+                 (env | b_strain_3) +
+                 (env | b_strain_4) +
+                 (env | b_strain_5) +
+                 (env | b_strain_6) +
+                 (env | b_strain_7) +
+                 (env | b_strain_8) +
+                 (env | b_strain_9) +
+                 (env | b_strain_10),
+               data = Dat)
+    # summary(m1)
+    # ranef(m1)$b_strain_1
+    
+    B_est <- rbind( get_b(ranef(m1)$b_strain_1),
+                    get_b(ranef(m1)$b_strain_2),
+                    get_b(ranef(m1)$b_strain_3),
+                    get_b(ranef(m1)$b_strain_4),
+                    get_b(ranef(m1)$b_strain_5),
+                    get_b(ranef(m1)$b_strain_6),
+                    get_b(ranef(m1)$b_strain_7),
+                    get_b(ranef(m1)$b_strain_8),
+                    get_b(ranef(m1)$b_strain_9),
+                    get_b(ranef(m1)$b_strain_10))
+    
+    Res <- Res %>%
+      bind_rows(bind_cols(b_strains_est = B_est[,1],
+                          b_strains_true = Sims$b_strains,
+                          b_envstrain_est = B_est[,2],
+                          b_envstrain_true = Sims$b_envstrain) %>%
+                  mutate(sim_id = colnames(Sims$Sims)[i]))
+    
+  }
+  Res
+    
+}
+
+
+n_sets <- 100
 set.seed(39)
-Sims <- sim_syncom_rand(n_sims = 10, n_coms = 32)
+# Sims <- sim_syncom_rand(n_sims = 10, n_coms = 32)
+# Res <- extract_estimates_rand(Sims)
+
+Res <- NULL
+for(i in 1:n_sets){
+  Sims <- sim_syncom_rand(n_sims = 10)
+  
+  Res <- Res %>%
+    bind_rows(extract_estimates_rand(Sims) %>%
+                mutate(set_id = paste0("set_", i))) 
+}
+Res
+write.table(Res, file = "rand_sims_est_vs_true.tsv")
+
+
+p1 <- Res %>%
+  ggplot(aes(x = b_strains_true, y = b_strains_est)) +
+  geom_point() +
+  geom_abline(slope = 1, intercept = 0, col = "blue", size = 2) +
+  AMOR::theme_blackbox()
+p1 
+ggsave("rand_b_strains.png", width = 5, height = 5)
+
+p1 <- Res %>%
+  ggplot(aes(x = b_envstrain_true, y = b_envstrain_est)) +
+  geom_point() +
+  geom_abline(slope = 1, intercept = 0, col = "blue", size = 2) +
+  AMOR::theme_blackbox()
+p1
+ggsave("rand_b_envstrain.png", width = 5, height = 5)
+
+
+p1 <- Res %>%
+  ggplot(aes(x = abs(b_strains_true - b_strains_est), group = set_id)) +
+  geom_density() +
+  AMOR::theme_blackbox()
+p1
+ggsave("rand_b_strain_error.png", width = 5, height = 5)
+
+p1 <- Res %>%
+  ggplot(aes(x = abs(b_envstrain_true - b_envstrain_est), group = set_id)) +
+  geom_density() +
+  AMOR::theme_blackbox()
+p1
+ggsave("rand_b_envstrain_error.png", width = 5, height = 5)
 
 
 
 
-
-i <- 1
-Dat <- Sims$Dat
-Dat$y <- Sims$Sims[,i]
-
-m1 <- lmer(y ~ env + (env | b_strain_1) +
-             (env | b_strain_2) +
-             (env | b_strain_3) +
-             (env | b_strain_4) +
-             (env | b_strain_5) +
-             (env | b_strain_6) +
-             (env | b_strain_7) +
-             (env | b_strain_8) +
-             (env | b_strain_9) +
-             (env | b_strain_10),
-           data = Dat)
-# summary(m1)
-# ranef(m1)$b_strain_1
 
 
 
