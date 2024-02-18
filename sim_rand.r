@@ -144,7 +144,7 @@ for(i in 1:n_sets){
                 mutate(set_id = paste0("set_", i))) 
 }
 Res
-write.table(Res, file = "rand_sims_est_vs_true.tsv")
+write_tsv(Res, file = "rand_sims_est_vs_true.tsv")
 
 
 p1 <- Res %>%
