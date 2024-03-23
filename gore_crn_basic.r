@@ -150,6 +150,14 @@ coda::HPDinterval(as.mcmc(V_I_hat))
 var_uncert / mean(V_I_hat)
 
 
+# We can do the same separately for the slope
+V_S_hat <- (var(design_mat[ , "Nutrient"]))
+pi  <- V_S_hat / V_I_hat
+plot(as.mcmc(pi))
+mean(pi)                 # 0.24
+coda::HPDinterval(as.mcmc(pi)) # 0.18 - 0.30
+
+
 beta_hat <- fixef(m1.brms, summary = FALSE)
 # Setting up the posterior distribution as a list, it'll be convenient later
 beta_hat <- apply(beta_hat, 1, \(vec) { vec }, simplify = FALSE)
