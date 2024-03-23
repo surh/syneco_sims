@@ -63,6 +63,41 @@ summary(mc)
 AIC(mp0, mp1, mp2, mc)
 BIC(mp0, mp1, mp2, mc)
 
+#' ## Extract params from polynomial models
+mp <- mp2
+
+#' Design matrix
+design_mat <- model.matrix(mp)
+
+#' Variance-covariance matrix
+varcov <- VarCorr(mp)[["Community"]]
+attr(varcov, "stddev") <- attr(varcov, "correlation") <- NULL
+
+# Average (fixed) effects
+out <- summary(mp)[["coefficients"]]
+coefs <- out[ , "Estimate"]
+se    <- out[ , "Std. Error"]
+  
+# Residual variance
+V_R <- attr(VarCorr(mp), "sc")^2
+  
+# Returning the list of parameters
+tibble(a    = coefs[1],
+       b    = coefs[2],
+       c    = coefs[3],
+       a_se = se[1],
+       b_se = se[2],
+       c_se = se[3],
+       Va   = varcov[1, 1],
+       Vb   = varcov[2, 2],
+       Vc   = varcov[3, 3],
+       Cab  = varcov[1, 2],
+       Cac  = varcov[1, 3],
+       Cbc  = varcov[2, 3],
+       V_R   = V_R) 
+
+
+
 
 
 
