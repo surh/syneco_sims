@@ -58,7 +58,6 @@ mc <- lmer(OD ~ 0 + Nutrient_f + (0 + Nutrient_f | Community),
            data = Dat)
 summary(mc)
 
-
 #' Compare all modelos with AIC, BIC
 AIC(mp0, mp1, mp2, mc)
 BIC(mp0, mp1, mp2, mc)
@@ -79,24 +78,52 @@ coefs <- out[ , "Estimate"]
 se    <- out[ , "Std. Error"]
   
 # Residual variance
-V_R <- attr(VarCorr(mp), "sc")^2
+V_Res <- attr(VarCorr(mp), "sc")^2
+
+# Variance-covariance of environment
+varcov_design <- cov(design_mat)
   
-# Returning the list of parameters
-tibble(a    = coefs[1],
-       b    = coefs[2],
-       c    = coefs[3],
-       a_se = se[1],
-       b_se = se[2],
-       c_se = se[3],
-       Va   = varcov[1, 1],
-       Vb   = varcov[2, 2],
-       Vc   = varcov[3, 3],
-       Cab  = varcov[1, 2],
-       Cac  = varcov[1, 3],
-       Cbc  = varcov[2, 3],
-       V_R   = V_R) 
+# # Returning the list of parameters
+# tibble(a    = coefs[1],
+#        b    = coefs[2],
+#        c    = coefs[3],
+#        a_se = se[1],
+#        b_se = se[2],
+#        c_se = se[3],
+#        Va   = varcov[1, 1],
+#        Vb   = varcov[2, 2],
+#        Vc   = varcov[3, 3],
+#        Cab  = varcov[1, 2],
+#        Cac  = varcov[1, 3],
+#        Cbc  = varcov[2, 3],
+#        V_R   = V_R) 
 
 
+#'  ## Variance partitioning
+#'  For a polynomial model we have an unbiased estimator for V_plas
+#'  \hat{V}_{Plas} = \bar\theta^TX\theta - Tr(S_\theta X)
+
+V_Plas <- coefs %*% varcov_design %*% coefs - se %*% varcov_design %*% se
+V_Plas <- as.numeric(V_Plas)
+
+#' For V_gen we have:
+#' V_{Gen} = E_\epsilon(x^T\Theta x) = \bar{x}^T\Theta\bar{x} + Tr(\Theta X)
+#' Is this equivalent?
+V_Gen <- sum( diag( (1/nrow(design_mat)) * (t(design_mat) %*% design_mat) %*% varcov ) )
+
+V_Tot <- V_Plas + V_Gen + V_Res
+V_Phen <- var(Dat$OD)
+V_Plas
+V_Gen
+V_Res
+V_Tot
+V_Phen
+
+
+Pi <- (coefs^2 * diag(varcov_design) - se^2) / V_Plas
+Pi
+Gamma <- 2 * varcov[1, 3] * mean(design_mat[,3]) / V_Gen
+Gamma
 
 
 
